@@ -24,44 +24,64 @@ async function go() {
 
     try {
         await page.goto(
-          "https://www.cmsk12.org/domain/300"
+          "https://www.cmsk12.org/alexandergrahamMS"
         );
     } catch (error) {
         console.log("Error going to page");
     }
 
-    await page.waitForSelector('ul#channel-navigation')
 
+
+
+
+
+    await page.waitForSelector('ul#channel-navigation')
     const link = await page.$('ul#channel-navigation li:nth-child(2) > a');
     await link.hover();
+
 
     const facultyLink = await page.$('ul.sw-channel-dropdown > li ul > li:nth-of-type(2) a');
     await facultyLink.click();
 
-    let teacherSelector = 'li[data-name="Teachers"]';
+
+    const teacherSelector = 'li[data-name="Teachers"]';
     await page.waitForSelector(teacherSelector);
-    
     await page.click(teacherSelector);
 
 
 
 
-    /*
-    const dropdownUl = await page.$('ul#sw-channel-dropdown');
-    const firstChild2 = await dropdownUl.$('li:first-child');
 
-    console.log(firstChild2.getProperties('textContent').jsonValue());
 
-    
-    const navUl = await firstChild2.$('ul:first-child')
 
-    const navUlChildren = await navUl.$$('li');
 
-    const staffLi = navUlChildren[1];
+    await page.waitForSelector('ul.staff-directory-pagination-list');
+    const paginationUl = await page.$('ul.staff-directory-pagination-list');
+    const pageCount = await page.evaluate(el => el.children.length, paginationUl);
 
-    staffLi.$('a:first-child').click();
-*/
 
+
+
+    for (let i = 1; i <= pageCount; i++) {
+        console.log("\n NEW PAGE ||||||||||||||||||||| \n")
+        
+        await page.click(`ul.staff-directory-pagination-list li:nth-of-type(${i})`);
+        const staffListSelector = "div.org-details-tab-panel.teachers ul";
+        await page.waitForSelector(staffListSelector);
+
+        await delay(1000);
+
+        const ul = await page.$(staffListSelector);
+        const teachersUl = await ul.$$('li');
+
+        for(let teacher of teachersUl){
+            const name = await teacher.$eval('.staff-directory-name', node => node.textContent);
+            const title = await teacher.$eval('.staff-directory-detail', node => node.textContent);
+            const email = await teacher.$eval('a[href^="mailto"]', node => 
+                node.getAttribute('href').slice(7));
+            console.log(name, title, email);
+        }
+    }
 }
 
 go();
