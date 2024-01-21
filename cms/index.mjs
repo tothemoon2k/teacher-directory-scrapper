@@ -33,7 +33,7 @@ async function getSchools() {
     await page.waitForSelector(allSchoolsBtn);
     await page.click(allSchoolsBtn);
 
-    await delay(2000);
+    await delay(3000);
 
     await page.waitForSelector('li.cs-mega-school');
     const schoolLis = await page.$$('li.cs-mega-school');
@@ -41,6 +41,7 @@ async function getSchools() {
     for(let school of schoolLis){
         const name = await school.$eval('a', node => node.getAttribute('href'));
         if(name === "/elementary-schools") continue;
+        if(name.slice(-2) !== "HS") continue;
 
         try {
             await go(name, `https://www.cmsk12.org${name}`);
@@ -48,8 +49,6 @@ async function getSchools() {
             console.log("Page closed due to error, moving onto next");
         }
     }
-
-    page.close();
 }
 
 await getSchools();
