@@ -80,39 +80,112 @@ async function getSchools() {
 
 await getSchools();
 
-console.log(elementarySchools, middleSchools, highSchools);
-
 async function scrapeSchool (school, url, level) {
     const page = await browser.newPage();
 
-    await page.goto(`${url}/directory/index`);
+    try {
+        await page.goto(`${url}/directory/index`);
+    } catch (error) {
+        console.log("Error launching page");
+        await page.close();
+    }
+
+    const bodyText = await page.evaluate(() => document.body.textContent);
+
+    if(bodyText.includes('404')) {
+        await page.close();
+        throw new Error('Default staff directory path not matched'); 
+    }
 
     await page.waitForSelector(".panel-body");
 
-    const teacherData = await page.evaluate(() => {
+    await page.select('select#dirDept', 'teacher');
 
-        const panels = document.querySelectorAll('.panel-body');
-        
-        return [...panels].map(panel => {
-          const name = panel.querySelector('.panel-title').textContent;
-          const image = panel.querySelector('img').src;
-          const depts = panel.querySelector('.depts').textContent; 
-          const email = panel.querySelector('.email a').href.slice(7);
-      
-          return {
-            name, 
-            image,
-            depts,
-            email
-          };
+    await page.waitForNetworkIdle();
+
+    await delay(1000);
+
+    const panels = await page.$$('.panel-body');
+
+    for (const panel of panels) {
+        const name = await panel.$eval('.panel-title', el => el.textContent);
+        const image = await panel.$eval('img', el => el.src);
+        const dept = await panel.$eval('.depts', el => el.textContent);
+        const email = await panel.$eval('.email a', el => el.href.slice(7));
+
+        fs.appendFile(`./data/${level}/${school}.csv`, `${name},${dept},${email}\n`, function (err) {
+            if (err) throw err;
+            console.log('Teacher Added!');
         });
-      
-    });
+    }
 
-    console.log(teacherData);
+    page.close();
 }
 
 
-//for(let)
+for(let school of highSchools){
+    let schoolName;
+    try {
+        const regex = /https:\/\/([^.]+)\.pwcs\.edu\//
+        const match = school.match(regex);
 
-await scrapeSchool("yo mama high", highSchools[0], "high-school");
+        if(!match) {
+            throw new Error('Regex error');
+        }
+
+        schoolName = match[1];
+    } catch (error) {
+        console.log("Not able to format school name")
+    }
+
+    try {
+        await scrapeSchool(schoolName, school, "high-school");
+    } catch (error) {
+        console.log("There was an error, moving onto next school.", error);
+    }
+}
+
+for(let school of middleSchools){
+    let schoolName;
+    try {
+        const regex = /https:\/\/([^.]+)\.pwcs\.edu\//
+        const match = school.match(regex);
+
+        if(!match) {
+            throw new Error('Regex error');
+        }
+
+        schoolName = match[1];
+    } catch (error) {
+        console.log("Not able to format school name")
+    }
+
+    try {
+        await scrapeSchool(schoolName, school, "middle-school");
+    } catch (error) {
+        console.log("There was an error, moving onto next school.", error);
+    }
+}
+
+for(let school of elementarySchools){
+    let schoolName;
+    try {
+        const regex = /https:\/\/([^.]+)\.pwcs\.edu\//
+        const match = school.match(regex);
+
+        if(!match) {
+            throw new Error('Regex error');
+        }
+
+        schoolName = match[1];
+    } catch (error) {
+        console.log("Not able to format school name")
+    }
+
+    try {
+        await scrapeSchool(schoolName, school, "elementary-school");
+    } catch (error) {
+        console.log("There was an error, moving onto next school.", error);
+    }
+}
+
